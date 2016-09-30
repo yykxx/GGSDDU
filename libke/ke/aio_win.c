@@ -88,6 +88,7 @@ struct ke_aio {
     void (*after_poll)(void *, int);
     void *data1;
     void *data2;
+    void *user_data;
     HANDLE iocp;
     struct ke_lookaside_list fd_pool;
     struct ke_lookaside_list tcp_connect_ctx_pool;
@@ -140,28 +141,23 @@ static int ke_aio_accept_inner(struct ke_aio_fd *,
                                struct ke_aio_tcp_accept_ctx *); 
 
 /* create aio
- * return NULL -- error, else success
- */    
-ke_aio_t ke_aio_create()
-{
-    return calloc(1, sizeof(struct ke_aio));
-}
-
-/* create aio
- * @handle -- aio handle 
  * @config -- aio config 
- * return 0 -- success, else error
- */
-int ke_aio_init(ke_aio_t handle, const struct ke_aio_config* config)
+ * return KE_AIO_INVALID_HANDLE -- error, else success
+ */    
+ke_aio_t ke_aio_create(const struct ke_aio_config *config)
 {
     struct ke_aio *aio;
 
 #ifdef KE_STRICT_CHECK
     if (!config->alloc || !config->free)
-        return (-1);
+        return (KE_AIO_INVALID_HANDLE);
 #endif
 
-    aio = (struct ke_aio *)handle;
+    aio = config->alloc(sizeof(*aio));
+    if (aio == NULL)
+        return (KE_AIO_INVALID_HANDLE);
+
+    memset(aio, 0, sizeof(*aio));
     aio->alloc = config->alloc;
     aio->free = config->free;
     aio->before_poll = config->before_poll;
@@ -203,7 +199,7 @@ int ke_aio_init(ke_aio_t handle, const struct ke_aio_config* config)
                            config->free_task,
                            sizeof(struct ke_aio_ovrlp), 
                            -1, config->alloc, config->free);
-    return (0);
+    return (aio);
 }
 
 /* close aio
@@ -234,6 +230,37 @@ int ke_aio_close(ke_aio_t handle)
 
     aio->free(aio);
     return (0);
+}
+
+/* get userdata
+ * @handle -- aio handle
+ * return the userdata, default NULL
+ */
+void *ke_aio_get_user_data(ke_aio_t handle)
+{
+    void *user_data = NULL;
+
+    if (handle != KE_AIO_INVALID_HANDLE) {
+        struct ke_aio *aio = (struct ke_aio *)handle;
+        user_data = aio->user_data;
+    }
+    return (user_data);
+}
+
+/* bind userdata
+ * @handle -- aio handle
+ * return the old userdata
+ */
+void *ke_aio_set_user_data(ke_aio_t handle, void *user_data)
+{
+    void* old_ud = NULL;
+
+    if (handle != KE_AIO_INVALID_HANDLE) {
+        struct ke_aio *aio = (struct ke_aio *)handle;
+        old_ud = aio->user_data;
+        aio->user_data = user_data;
+    }
+    return (old_ud);
 }
 
 /* create tcp fd

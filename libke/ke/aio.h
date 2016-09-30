@@ -36,10 +36,11 @@
 #endif
 
 /* poll state */
-#define KE_AIO_POLL_SUCCESS    0
-#define KE_AIO_POLL_TIMEOUT    1
+#define KE_AIO_POLL_SUCCESS   0
+#define KE_AIO_POLL_TIMEOUT   1
 
-#define KE_AIO_INVALID_FD   NULL
+#define KE_AIO_INVALID_FD     NULL
+#define KE_AIO_INVALID_HANDLE NULL
 
 #ifdef __cplusplus
 extern "C" {
@@ -71,22 +72,27 @@ struct ke_aio_config {
 };
 
 /* create aio
- * return NULL -- error, else success
+ * return KE_AIO_INVALID_HANDLE -- error, else success
  */    
-ke_aio_t ke_aio_create();
+ke_aio_t ke_aio_create(const struct ke_aio_config* config);
 
-/* create aio
- * @handle -- aio handle 
- * @config -- aio config 
- * return 0 -- success, else error
- */
-int ke_aio_init(ke_aio_t handle, const struct ke_aio_config* config);
-    
 /* close aio
  * @handle -- aio handle
  * return 0 -- success, else error
  */
 int ke_aio_close(ke_aio_t handle);
+
+/* get userdata
+ * @handle -- aio handle
+ * return the userdata, default NULL
+ */
+void *ke_aio_get_user_data(ke_aio_t handle);
+
+/* bind userdata
+ * @handle -- aio handle
+ * return the old userdata
+ */
+void *ke_aio_set_user_data(ke_aio_t handle, void *user_data);
 
 /* create tcp fd
  * @handle -- aio handle

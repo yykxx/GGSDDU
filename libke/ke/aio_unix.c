@@ -44,7 +44,8 @@ struct ke_aio {
     void *(*alloc)(size_t);
     void (*free)(void *);
     void *poller;
-    int errcode;
+    void *userdata;
+    volatile int errcode;
     volatile int stop;
     struct ke_queue task_queue;    
     struct ke_lookaside_list fd_pool;
@@ -119,35 +120,31 @@ static int ke_aio_closefd_internal(struct ke_aio_fd *afd);
 #endif
 
 /* create aio
- * return NULL -- error, else success
- */    
-ke_aio_t ke_aio_create()
-{
-    return (struct ke_aio *)calloc(1, sizeof(struct ke_aio));
-}
-
-/* create aio
- * @handle -- aio handle 
  * @config -- aio config 
- * return 0 -- success, else error
- */
-int ke_aio_init(ke_aio_t handle, const struct ke_aio_config *config)
+ * return KE_AIO_INVALID_HANDLE -- error, else success
+ */    
+ke_aio_t ke_aio_create(const struct ke_aio_config *config)
 {
-    void *poller;
     struct ke_aio *aio;
+    void *poller;
 
-    aio = (struct ke_aio *)handle;
-    
 #ifdef KE_STRICT_CHECK
-    if (!config->alloc || !config->free) {
+    if (!config || !config->alloc || !config->free) {
         KE_AIO_SET_ERRCODE(aio, EINVAL);
-        return (-1);
+        return (KE_AIO_INVALID_HANDLE);
     }
 #endif
 
+    aio = config->alloc(sizeof(*aio));
+    if (!aio) {
+        return (KE_AIO_INVALID_HANDLE);
+    }
+
     poller = ke_aio_create_poller(aio, config);
-    if (!poller)
-        return (-1);
+    if (!poller) {
+        config->mfree(aio);
+        return (KE_AIO_INVALID_HANDLE);
+    }
 
     aio->alloc = config->alloc;
     aio->free = config->free;
@@ -177,7 +174,7 @@ int ke_aio_init(ke_aio_t handle, const struct ke_aio_config *config)
                            sizeof(struct ke_aio_task),
                            -1, config->alloc, config->free);
 
-    return (0);
+    return (aio);
 }
 
 /* close proactor
@@ -188,6 +185,10 @@ int ke_aio_close(ke_aio_t handle)
 {
     struct ke_aio *aio;
 
+    if (handle == KE_AIO_INVALID_HANDLE) {
+        return (-1);
+    }
+
     aio = (struct ke_aio *)handle;
     if (aio->poller) {
         ke_aio_close_poller(aio->poller);
@@ -196,8 +197,39 @@ int ke_aio_close(ke_aio_t handle)
         ke_lookaside_list_destroy(&aio->ioctx_pool);
         ke_lookaside_list_destroy(&aio->fd_pool);        
     }
-    free(aio);
+    aio->mfree(aio);
     return (0);
+}
+
+/* get userdata
+ * @handle -- aio handle
+ * return the userdata, default NULL
+ */
+void *ke_aio_get_user_data(ke_aio_t handle)
+{
+    void *user_data = NULL;
+
+    if (handle != KE_AIO_INVALID_HANDLE) {
+        struct ke_aio *aio = (struct ke_aio *)handle;
+        user_data = aio->user_data;
+    }
+    return (user_data);
+}
+
+/* bind userdata
+ * @handle -- aio handle
+ * return the old userdata
+ */
+void *ke_aio_set_user_data(ke_aio_t handle, void *user_data)
+{
+    void* old_ud = NULL;
+
+    if (handle != KE_AIO_INVALID_HANDLE) {
+        struct ke_aio *aio = (struct ke_aio *)handle;
+        old_ud = aio->user_data;
+        aio->user_data = user_data;
+    }
+    return (old_ud);
 }
 
 /* create tcp fd
