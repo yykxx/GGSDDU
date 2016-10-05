@@ -84,8 +84,8 @@ struct ke_aio_tcp_connect_ctx {
 struct ke_aio {
     void *(*alloc)(size_t);
     void (*free)(void *);
-    int (*before_poll)(void *);
-    void (*after_poll)(void *, int);
+    int (*before_poll)(ke_aio_t, void *);
+    void (*after_poll)(ke_aio_t, void *, int);
     void *data1;
     void *data2;
     void *user_data;
@@ -853,7 +853,7 @@ void ke_aio_run(ke_aio_t handle)
         int err = KE_AIO_POLL_SUCCESS;
 
         if (aio->before_poll)
-            timeout = aio->before_poll(aio->data1);
+            timeout = aio->before_poll(aio, aio->data1);
 
         if (timeout == -1)
             timeout = KE_AIO_DEFAULT_POLL_TIMEOUT;
@@ -892,7 +892,7 @@ void ke_aio_run(ke_aio_t handle)
         }
 
         if (aio->after_poll)
-            aio->after_poll(aio->data2, err);
+            aio->after_poll(aio, aio->data2, err);
     }
 }
 

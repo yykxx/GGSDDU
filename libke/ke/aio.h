@@ -61,10 +61,10 @@ struct ke_aio_config {
     int32_t free_file_io_task;
 #endif
     
-    int (*before_poll)(void *);
+    int (*before_poll)(ke_aio_t, void *);
     void *before_poll_user_data;
     
-    void (*after_poll)(void *, int);
+    void (*after_poll)(ke_aio_t, void *, int);
     void *after_poll_user_data;
     
     void *(*alloc)(size_t);

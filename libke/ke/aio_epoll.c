@@ -465,7 +465,7 @@ void ke_aio_run(ke_aio_t handle)
         int timeout = -1, n, i;
         
         if (aio->before_poll)
-            timeout = aio->before_poll(aio->before_poll_user_data);
+            timeout = aio->before_poll(aio, aio->before_poll_user_data);
 
         if (timeout < 0)
             timeout = KE_AIO_DEFAULT_POLL_TIMEOUT;
@@ -532,8 +532,8 @@ void ke_aio_run(ke_aio_t handle)
         ke_aio_run_post_task(aio);
         
         if (aio->after_poll) {
-            aio->after_poll(aio->after_poll_user_data,
-                         n == 0 ? KE_AIO_POLL_TIMEOUT : KE_AIO_POLL_SUCCESS);
+            aio->after_poll(aio, aio->after_poll_user_data,
+                            n == 0 ? KE_AIO_POLL_TIMEOUT : KE_AIO_POLL_SUCCESS);
         }
     }
 }

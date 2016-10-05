@@ -37,14 +37,14 @@
 #define KE_EVENTS_MAX_COUNT 64
 
 struct ke_aio {
-    int (*before_poll)(void *);
+    int (*before_poll)(ke_aio_t, void *);
     void *before_poll_user_data;
-    void (*after_poll)(void *, int);
+    void (*after_poll)(ke_aio_t, void *, int);
     void *after_poll_user_data;
     void *(*alloc)(size_t);
     void (*free)(void *);
     void *poller;
-    void *userdata;
+    void *user_data;
     volatile int errcode;
     volatile int stop;
     struct ke_queue task_queue;    
@@ -142,7 +142,7 @@ ke_aio_t ke_aio_create(const struct ke_aio_config *config)
 
     poller = ke_aio_create_poller(aio, config);
     if (!poller) {
-        config->mfree(aio);
+        config->free(aio);
         return (KE_AIO_INVALID_HANDLE);
     }
 
@@ -197,7 +197,7 @@ int ke_aio_close(ke_aio_t handle)
         ke_lookaside_list_destroy(&aio->ioctx_pool);
         ke_lookaside_list_destroy(&aio->fd_pool);        
     }
-    aio->mfree(aio);
+    aio->free(aio);
     return (0);
 }
 
