@@ -1,0 +1,5 @@
+project(commiocp)
+set(CMAKE_MFC_FLAGS 0)
+set(SRC commiocp.h commiocp.c)
+set(LIBRARY_OUTPUT_PATH ${PROJECT_BINARY_DIR}/lib)
+add_library(commiocp ${SRC})
