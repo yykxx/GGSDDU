@@ -167,8 +167,8 @@ ke_aio_t ke_aio_create(const struct ke_aio_config *config)
 
     aio->iocp = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, 0, 1);
     if (!aio->iocp) {
-        ke_aio_close(aio);
-        return (-1);
+        config->free(aio);
+        return (KE_AIO_INVALID_HANDLE);
     }
 
     ke_lookaside_list_init(&aio->fd_pool, config->free_fd,
