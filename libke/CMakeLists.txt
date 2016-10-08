@@ -7,7 +7,6 @@ option(STRICT_CHECK "strict check" ON)
 
 if (CMAKE_SYSTEM_NAME MATCHES "Linux")
     message("build on linux")
-    add_definitions(-DUSE_EPOLL)
 elseif (CMAKE_SYSTEM_NAME MATCHES "Windows")
     message("build on windows")
     set(CMAKE_MFC_FLAGS 0)

@@ -114,7 +114,7 @@ static void ke_aio_connect_event_handler(struct ke_aio_ioctx *);
 static void ke_aio_run_post_task(struct ke_aio *aio);
 static int ke_aio_closefd_internal(struct ke_aio_fd *afd);
 
-#ifdef USE_EPOLL
+#if defined(linux) || defined(__linux) || defined(__linux__)
 #include "ke/aio_epoll.c"
 #else
 #endif
