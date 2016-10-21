@@ -41,7 +41,6 @@ struct ke_aio_close_handler {
 };
 
 #if defined(_WIN32) || defined(_WIN64)
-#include "ke/aio_win.c"
 #else
 #include "ke/aio_unix.c"
 #endif

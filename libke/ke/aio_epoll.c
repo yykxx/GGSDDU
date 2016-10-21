@@ -129,7 +129,7 @@ static void ke_aio_close_poller(void* data)
     free(poller);
 }
 
-static ke_native_errno_t
+static ke_error_t
 ke_aio_create_poller(void** pp, const struct ke_aio_config *config)
 {
     int err;
@@ -224,7 +224,7 @@ static int ke_aio_epoll_ctl(struct ke_aio_epoll *poller,
 
         err = epoll_ctl(poller->epoll_fd, ctl_mod, fd, &ev);
         if (err)
-            KE_AIO_SET_ERRNO(afd->aio);
+            err = errno;
         else
             afd->events = ev.events;
     }
@@ -437,9 +437,6 @@ static void ke_aio_report_write_event(struct ke_aio_fd *afd)
     }
 }
 
-/* run loop
- * @actr -- aio 
- */
 void ke_aio_run(ke_aio_t handle)
 {
     struct ke_aio *aio;
@@ -526,29 +523,30 @@ void ke_aio_run(ke_aio_t handle)
     }
 }
 
-/* notify run loop to break
- * @handle -- aio to shutdown
- * return 0 -- success, else error
- */
-int ke_aio_notify_exit(ke_aio_t handle)
+ke_error_t ke_aio_notify_exit(ke_aio_t handle)
 {
     struct ke_aio *aio;
+    ke_error_t err;
 
     aio = (struct ke_aio *)handle;
-    aio->stop = 1;
-    ke_aio_wakeup(handle);
-    return (0);
+    if (aio) {
+        aio->stop = 1;
+        err = ke_aio_wakeup(handle);
+    } else {
+        err = EINVAL;
+    }
+    return (err);
 }
 
-/* wakeup the thread which is waiting on aio
- * @handle -- aio
- * return 0 -- success, else error
- */
-int ke_aio_wakeup(ke_aio_t handle)
+ke_error_t ke_aio_wakeup(ke_aio_t handle)
 {
     struct ke_aio *aio;
     struct ke_aio_epoll *poller;
     struct epoll_event ev;
+    ke_error_t err = 0;
+
+    if (!handle)
+        return (EINVAL);
 
     aio = (struct ke_aio *)handle;
     poller = (struct ke_aio_epoll *)aio->poller;
@@ -558,11 +556,9 @@ int ke_aio_wakeup(ke_aio_t handle)
     ev.data.ptr = poller->wakeup_pipe_fd;
 
     if (epoll_ctl(poller->epoll_fd, EPOLL_CTL_ADD, 
-                  poller->wakeup_pipe_fd[1], &ev) < 0) {
-        KE_AIO_SET_ERRNO(aio);
-        return (-1);
-    }
-    return (0);
+                  poller->wakeup_pipe_fd[1], &ev) < 0)
+        err = errno;
+    return (err);
 }
 
 int ke_aio_disable_wakeup(ke_aio_t handle)
@@ -570,15 +566,17 @@ int ke_aio_disable_wakeup(ke_aio_t handle)
     struct ke_aio *aio;
     struct ke_aio_epoll *poller;
     struct epoll_event ev;
+    ke_error_t err = 0;
+
+    if (!handle)
+        return (EINVAL);
 
     aio = (struct ke_aio *)handle;
     poller = (struct ke_aio_epoll *)aio->poller;
 
     if (epoll_ctl(poller->epoll_fd, EPOLL_CTL_DEL, 
-                  poller->wakeup_pipe_fd[1], &ev) < 0) {
-        KE_AIO_SET_ERRNO(aio);
-        return (-1);
-    }
-    return (0);
+                  poller->wakeup_pipe_fd[1], &ev) < 0)
+        err = errno;
+    return (err);
 }
 

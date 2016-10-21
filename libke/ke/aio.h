@@ -34,10 +34,10 @@
 #define KE_AIO_FD_FILE       2
 
 /* poll state */
-#define KE_AIO_POLL_SUCCESS   0
-#define KE_AIO_POLL_TIMEOUT   1
+#define KE_AIO_POLL_TIMEOUT  0
+#define KE_AIO_POLL_SUCCESS  1
 
-#define KE_AIO_INVALID_FD     NULL
+#define KE_AIO_INVALID_FD    NULL
 
 #ifdef __cplusplus
 extern "C" {
@@ -73,30 +73,26 @@ struct ke_aio_config {
  * @config [in] -- common configure for aio
  * return 0 -- success, else error
  */    
-ke_native_errno_t 
-ke_aio_create(ke_aio_t *handle, const struct ke_aio_config *config);
+ke_error_t ke_aio_create(ke_aio_t *handle, const struct ke_aio_config *config);
 
 /* close aio
  * @handle [in] -- aio handle
  * return 0 -- success, else error
  */
-ke_native_errno_t
-ke_aio_close(ke_aio_t handle);
+ke_error_t ke_aio_close(ke_aio_t handle);
 
 /* get userdata
  * @handle [in] -- aio handle
  * return the userdata, default NULL
  */
-void *
-ke_aio_get_user_data(ke_aio_t handle);
+void *ke_aio_get_user_data(ke_aio_t handle);
 
 /* bind userdata
  * @handle [in] -- aio handle
  * @user_data [in] -- user data
  * return the old userdata
  */
-void *
-ke_aio_set_user_data(ke_aio_t handle, void *user_data);
+void *ke_aio_set_user_data(ke_aio_t handle, void *user_data);
 
 /* associate native tcp socket with aio
  * @fd [out] -- hold aio tcp fd
@@ -104,8 +100,8 @@ ke_aio_set_user_data(ke_aio_t handle, void *user_data);
  * @sock [in] -- native tcp socket 
  * return 0 -- success, else error
  */
-ke_native_errno_t
-ke_aio_assoc_tcp(ke_aio_fd_t *fd, ke_aio_t handle, ke_native_sock_t sock);
+ke_error_t ke_aio_assoc_tcp(ke_aio_fd_t *fd, ke_aio_t handle, 
+                            ke_native_sock_t sock);
 
 /* associate native file with aio
  * @fd [out] -- hold aio file fd
@@ -113,15 +109,14 @@ ke_aio_assoc_tcp(ke_aio_fd_t *fd, ke_aio_t handle, ke_native_sock_t sock);
  * @file [in] -- native file 
  * return 0 -- success, else error
  */
-ke_native_errno_t
-ke_aio_assoc_file(ke_aio_fd_t *fd, ke_aio_t handle, ke_native_file_t file);
+ke_error_t ke_aio_assoc_file(ke_aio_fd_t *fd, ke_aio_t handle, 
+                             ke_native_file_t file);
 
 /* close fd 
- * @fd [in] -- aio fd 
+ * @fd [in] -- aio fd
  * return 0 -- success, else error
  */
-ke_native_errno_t
-ke_aio_closefd(ke_aio_fd_t fd);
+ke_error_t ke_aio_closefd(ke_aio_fd_t fd);
 
 /* async tcp read
  * @fd [in] -- valid aio tcp fd
@@ -131,10 +126,9 @@ ke_aio_closefd(ke_aio_fd_t fd);
  * @user_data [in] -- user data pass to on_io_done
  * return 0 -- success, else error
  */
-ke_native_errno_t
-ke_aio_tcp_read(ke_aio_fd_t fd, char *buf, int buflen, 
-                void (*on_io_done)(void *, char *, int),
-                void *user_data);
+ke_error_t ke_aio_tcp_read(ke_aio_fd_t fd, char *buf, int buflen, 
+                           void (*on_io_done)(void *, char *, int),
+                           void *user_data);
 
 /* async tcp write
  * @fd [in] -- valid aio tcp fd
@@ -144,10 +138,9 @@ ke_aio_tcp_read(ke_aio_fd_t fd, char *buf, int buflen,
  * @user_data [in] -- user data pass to on_io_done
  * return 0 -- success, else error
  */
-ke_native_errno_t
-ke_aio_tcp_write(ke_aio_fd_t fd, const char *buf, int buflen, 
-                 void (*on_io_done)(void *, const char *, int),
-                 void *user_data);
+ke_error_t ke_aio_tcp_write(ke_aio_fd_t fd, const char *buf, int buflen, 
+                            void (*on_io_done)(void *, const char *, int),
+                            void *user_data);
 
 /* async tcp accept
  * @fd [in] -- valid aio tcp fd
@@ -156,11 +149,11 @@ ke_aio_tcp_write(ke_aio_fd_t fd, const char *buf, int buflen,
  * @user_data -- user data pass to on_accept_done
  * return 0 -- success, else error
  */
-ke_native_errno_t
-ke_aio_tcp_accept(ke_aio_fd_t fd,
-                  int (*on_accept_done)(void *, ke_native_sock_t,
-                                        struct sockaddr *, socklen_t),
-                  void *user_data);
+ke_error_t ke_aio_tcp_accept(ke_aio_fd_t fd,
+                             int (*on_accept_done)(void *, ke_native_sock_t,
+                                                   const struct sockaddr *, 
+                                                   socklen_t),
+                             void *user_data);
 
 /* async tcp connect
  * @fd [in] -- valid aio tcp fd
@@ -170,11 +163,10 @@ ke_aio_tcp_accept(ke_aio_fd_t fd,
  * @user_data [in] -- user data pass to on_conn_done
  * return 0 -- success, else error
  */
-ke_native_errno_t
-ke_aio_tcp_connect(ke_aio_fd_t fd,
-                   const struct sockaddr *addr, socklen_t addrlen,
-                   void (*on_conn_done)(void *, int),
-                   void *user_data);
+ke_error_t ke_aio_tcp_connect(ke_aio_fd_t fd,
+                              const struct sockaddr *addr, socklen_t addrlen,
+                              void (*on_conn_done)(void *, int),
+                              void *user_data);
 
 /* async file read
  * @fd [in] -- valid aio file fd
@@ -185,10 +177,9 @@ ke_aio_tcp_connect(ke_aio_fd_t fd,
  * @user_data [in] -- user data pass to on_io_done
  * return 0 -- success, else error
  */
-ke_native_errno_t
-ke_aio_file_read(ke_aio_fd_t fd, char *buf, int buflen, uint64_t off,
-                 void (*on_io_done)(void *, char *, int),
-                 void *user_data);
+ke_error_t ke_aio_file_read(ke_aio_fd_t fd, char *buf, int buflen, uint64_t off,
+                            void (*on_io_done)(void *, char *, int),
+                            void *user_data);
     
 /* async file write
  * @fd [in] -- valid aio file fd
@@ -199,10 +190,10 @@ ke_aio_file_read(ke_aio_fd_t fd, char *buf, int buflen, uint64_t off,
  * @user_data [in] -- user data pass to on_io_done
  * return 0 -- success, else error
  */
-ke_native_errno_t
-ke_aio_file_write(ke_aio_fd_t fd, const char *buf, int buflen, uint64_t off,
-                  void (*on_io_done)(void *, const char *, int), 
-                  void *user_data);
+ke_error_t ke_aio_file_write(ke_aio_fd_t fd, const char *buf, int buflen, 
+                             uint64_t off,
+                             void (*on_io_done)(void *, const char *, int), 
+                             void *user_data);
 
 /* add close handler on fd
  * @fd [in] -- valid aio fd
@@ -210,9 +201,8 @@ ke_aio_file_write(ke_aio_fd_t fd, const char *buf, int buflen, uint64_t off,
  * @user_data [in] -- user data pass to handler
  * return 0 -- success, else error
  */
-ke_native_errno_t
-ke_aio_add_close_handler(ke_aio_fd_t fd, void (*handler)(void *),
-                         void *user_data);
+ke_error_t ke_aio_add_close_handler(ke_aio_fd_t fd, void (*handler)(void *),
+                                    void *user_data);
 
 /* remove close handler on fd
  * @fd [in] -- valid aio fd
@@ -220,35 +210,30 @@ ke_aio_add_close_handler(ke_aio_fd_t fd, void (*handler)(void *),
  * @user_data [in] -- user_data pass to handler
  * return 0 -- success, else error
  */
-ke_native_errno_t 
-ke_aio_rem_close_handler(ke_aio_fd_t fd, void (*handler)(void *), 
-                         void *user_data);
+ke_error_t ke_aio_rem_close_handler(ke_aio_fd_t fd, void (*handler)(void *), 
+                                    void *user_data);
 
 /* clear close handler on fd 
  * @fd [in] -- valid aio fd
  */
-void 
-ke_aio_clear_close_handler(ke_aio_fd_t fd);
+void ke_aio_clear_close_handler(ke_aio_fd_t fd);
 
 /* run loop
  * @handle [in] -- valid aio handle
  */
-void 
-ke_aio_run(ke_aio_t handle);
+void ke_aio_run(ke_aio_t handle);
 
 /* notify run loop to exit
  * @handle [in] -- valid aio handle
  * return 0 -- success, else error
  */
-ke_native_errno_t 
-ke_aio_notify_exit(ke_aio_t handle);
+ke_error_t ke_aio_notify_exit(ke_aio_t handle);
 
 /* wakeup IO thread
  * @handle [in] -- valid aio handle
  * return 0 -- success, else error
  */
-ke_native_errno_t
-ke_aio_wakeup(ke_aio_t handle);
+ke_error_t ke_aio_wakeup(ke_aio_t handle);
 
 /* post task
  * @handle [in] -- valid aio handle
@@ -256,24 +241,22 @@ ke_aio_wakeup(ke_aio_t handle);
  * @user_data [in] -- user data pass to task handler
  * return 0 -- success, else error
  */
-ke_native_errno_t
-ke_aio_post_task(ke_aio_t handle, void (*task)(void *), void *user_data);
+ke_error_t ke_aio_post_task(ke_aio_t handle, void (*task)(void *), 
+                            void *user_data);
 
 /* get native socket 
  * @sock [out] -- hold the native socket handle
  * @fd [in] -- valid aio fd
  * return 0 -- success, else error
  */
-ke_native_errno_t
-ke_aio_get_native_socket(ke_native_sock_t *sock, ke_aio_fd_t fd);
+ke_error_t ke_aio_get_native_socket(ke_native_sock_t *sock, ke_aio_fd_t fd);
 
 /* get native file 
  * @file [out] -- hold the native file handle
  * @fd [in] -- valid aio fd
  * return 0 -- success, else error
  */
-ke_native_errno_t
-ke_aio_get_native_file(ke_native_file_t *file, ke_aio_fd_t fd);
+ke_error_t ke_aio_get_native_file(ke_native_file_t *file, ke_aio_fd_t fd);
 
 #ifdef __cplusplus
 }

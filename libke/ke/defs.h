@@ -40,7 +40,7 @@
 typedef unsigned int mode_t;
 typedef SOCKET ke_native_sock_t;
 typedef HANDLE ke_native_file_t;
-typedef DWORD ke_native_errno_t;
+typedef DWORD ke_error_t;
 
 #else
 
@@ -48,7 +48,7 @@ typedef DWORD ke_native_errno_t;
 
 typedef int ke_native_sock_t;
 typedef int ke_native_file_t;
-typedef int ke_native_errno_t;
+typedef int ke_error_t;
 
 #endif
 
