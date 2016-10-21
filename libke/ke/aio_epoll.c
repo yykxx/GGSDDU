@@ -129,9 +129,10 @@ static void ke_aio_close_poller(void* data)
     free(poller);
 }
 
-static void *ke_aio_create_poller(struct ke_aio *aio,
-                                  const struct ke_aio_config *config)
+static ke_native_errno_t
+ke_aio_create_poller(void** pp, const struct ke_aio_config *config)
 {
+    int err;
 #ifdef KE_AIO_ENABLE_REGULAR_FILE
     int n = 1;
     struct epoll_event ev;
@@ -139,10 +140,8 @@ static void *ke_aio_create_poller(struct ke_aio *aio,
     struct ke_aio_epoll *poller;
 
     poller = calloc(0, sizeof(*poller));
-    if (!poller) {
-        KE_AIO_SET_ERRNO(aio);
-        return (NULL);
-    }
+    if (!poller)
+        return (ENOMEM);
 
     poller->wakeup_pipe_fd[0] = -1;
     poller->wakeup_pipe_fd[1] = -1;
@@ -157,53 +156,42 @@ static void *ke_aio_create_poller(struct ke_aio *aio,
 #endif
 
     poller->epoll_fd = epoll_create(20480);
-    if (poller->epoll_fd == -1) {
-        KE_AIO_SET_ERRNO(aio);
-        ke_aio_close_poller(poller);
-        return (NULL);
-    }
+    if (poller->epoll_fd == -1)
+        goto ERR;
 
 #ifdef KE_AIO_ENABLE_REGULAR_FILE
     poller->aio_event_fd = eventfd();
-    if (poller->aio_event_fd == -1) {
-        KE_AIO_SET_ERRNO(aio);
-        ke_aio_close_poller(poller);        
-        return (NULL);
-    }
+    if (poller->aio_event_fd == -1)
+        goto ERR;
 
-    if (ioctl(poller->aio_event_fd, FIONBIO, &n) == -1) {
-        KE_AIO_SET_ERRNO(aio);
-        ke_aio_close_poller(poller);        
-        return (NULL);
-    }
+    if (ioctl(poller->aio_event_fd, FIONBIO, &n) == -1)
+        goto ERR;
 
-    if (io_setup(KE_IO_EVENT_MAX_COUNT, &poller->aio_ctx) < 0) {
-        KE_AIO_SET_ERRNO(aio);
-        ke_aio_close_poller(poller);
-        return (NULL);
-    }
+    if (io_setup(KE_IO_EVENT_MAX_COUNT, &poller->aio_ctx) < 0)
+        goto ERR;
 #endif
 
-    if (pipe(poller->wakeup_pipe_fd) < 0) {
-        KE_AIO_SET_ERRNO(aio);
-        ke_aio_close_poller(poller);        
-        return (NULL);
-    }
+    if (pipe(poller->wakeup_pipe_fd) < 0)
+        goto ERR;
 
 #ifdef KE_AIO_ENABLE_REGULAR_FILE
     memset(&ev, 0, sizeof(ev));    
     ev.events = EPOLLIN | EPOLLET;
     ev.data.ptr = &poller->aio_event_fd;
 
-    if (epoll_ctl(poller->epoll_fd, EPOLL_CTL_ADD, poller->aio_event_fd,
-                  &ev) < 0) {
-        KE_AIO_SET_ERRNO(aio);
-        ke_aio_close_poller(poller);
-        return (NULL);
-    }
+    if (epoll_ctl(poller->epoll_fd, EPOLL_CTL_ADD, 
+                  poller->aio_event_fd, &ev) < 0)
+        goto ERR;
 #endif
 
-    return (poller);
+    *pp = poller;
+    return (0);
+
+ERR:
+    err = errno;
+    if (poller)
+        ke_aio_close_poller(poller);
+    return (err);
 }
 
 static int ke_aio_epoll_ctl(struct ke_aio_epoll *poller,
