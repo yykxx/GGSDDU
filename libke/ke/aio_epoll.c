@@ -150,7 +150,7 @@ ke_aio_create_poller(void** pp, const struct ke_aio_config *config)
 #ifdef KE_AIO_ENABLE_REGULAR_FILE
     poller->aio_event_fd = -1;
     ke_lookaside_list_init(&poller->file_io_task_pool,
-                           config->free_file_io_task,
+                           config->free_io_ctx,
                            sizeof(struct ke_aio_file_io_task), -1,
                            config->alloc, config->free);
 #endif

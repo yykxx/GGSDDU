@@ -47,11 +47,9 @@ typedef void *ke_aio_t;
 typedef void *ke_aio_fd_t;
 
 struct ke_aio_config {
-    int32_t free_close_handler; 
     int32_t free_fd;
     int32_t free_io_ctx;
     int32_t free_task;
-    int32_t free_file_io_task;
     
     int (*before_poll)(ke_aio_t aio, void *user_data);
     void *before_poll_user_data;

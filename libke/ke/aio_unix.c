@@ -153,7 +153,7 @@ ke_error_t ke_aio_create(ke_aio_t *handle, const struct ke_aio_config *config)
                            -1, config->alloc, config->free);
     
     ke_lookaside_list_init(&aio->close_handler_pool,
-                           config->free_close_handler,
+                           config->free_fd,
                            sizeof(struct ke_aio_close_handler),
                            -1, config->alloc, config->free);
 
