@@ -38,7 +38,6 @@
 #define KE_AIO_POLL_TIMEOUT   1
 
 #define KE_AIO_INVALID_FD     NULL
-#define KE_AIO_INVALID_HANDLE NULL
 
 #ifdef __cplusplus
 extern "C" {
@@ -70,52 +69,55 @@ struct ke_aio_config {
 };
 
 /* create aio
- * @handle[out] -- hold the result aio handle
- * @config[in] -- common configure for aio
+ * @handle [out] -- hold the result aio handle
+ * @config [in] -- common configure for aio
  * return 0 -- success, else error
  */    
 ke_native_errno_t 
 ke_aio_create(ke_aio_t *handle, const struct ke_aio_config *config);
 
 /* close aio
- * @handle -- aio handle
+ * @handle [in] -- aio handle
  * return 0 -- success, else error
  */
 ke_native_errno_t
 ke_aio_close(ke_aio_t handle);
 
 /* get userdata
- * @handle -- aio handle
+ * @handle [in] -- aio handle
  * return the userdata, default NULL
  */
 void *
 ke_aio_get_user_data(ke_aio_t handle);
 
 /* bind userdata
- * @handle -- aio handle
+ * @handle [in] -- aio handle
+ * @user_data [in] -- user data
  * return the old userdata
  */
 void *
 ke_aio_set_user_data(ke_aio_t handle, void *user_data);
 
 /* associate native tcp socket with aio
- * @handle -- aio handle
- * @sock -- native tcp socket 
+ * @fd [out] -- hold aio tcp fd
+ * @handle [in] -- aio handle
+ * @sock [in] -- native tcp socket 
  * return 0 -- success, else error
  */
 ke_native_errno_t
 ke_aio_assoc_tcp(ke_aio_fd_t *fd, ke_aio_t handle, ke_native_sock_t sock);
 
 /* associate native file with aio
- * @handle -- aio handle
- * @file -- native file 
+ * @fd [out] -- hold aio file fd
+ * @handle [in] -- aio handle
+ * @file [in] -- native file 
  * return 0 -- success, else error
  */
 ke_native_errno_t
 ke_aio_assoc_file(ke_aio_fd_t *fd, ke_aio_t handle, ke_native_file_t file);
 
 /* close fd 
- * @fd -- aio fd 
+ * @fd [in] -- aio fd 
  * return 0 -- success, else error
  */
 ke_native_errno_t
