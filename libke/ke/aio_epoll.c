@@ -23,12 +23,10 @@
  * SUCH DAMAGE.
  */
 
-#ifdef KE_AIO_ENABLE_REGULAR_FILE
 #define _GNU_SOURCE
 #include <linux/aio_abi.h>
 #include <sys/syscall.h>
 #include <sys/ioctl.h>
-#endif
 
 #include <fcntl.h>
 #include <errno.h>
@@ -40,15 +38,10 @@
 struct ke_aio_epoll {
     int epoll_fd;
     int wakeup_pipe_fd[2];
-
-#ifdef KE_AIO_ENABLE_REGULAR_FILE
     int aio_event_fd;
     aio_context_t aio_ctx;
     struct ke_lookaside_list file_io_task_pool;
-#endif
 };
-
-#ifdef KE_AIO_ENABLE_REGULAR_FILE
 
 struct ke_aio_file_io_task {
     struct ke_aio_ioctx *ioctx;
@@ -81,15 +74,11 @@ static int eventfd()
     return syscall(SYS_eventfd, 0);
 }
 
-#endif
-
 static int ke_aio_disable_wakeup(ke_aio_t);
 
 static void ke_aio_close_poller(void* data)
 {
-#ifdef KE_AIO_ENABLE_REGULAR_FILE
     aio_context_t nullctx;
-#endif
     struct ke_aio_epoll *poller;
 
     poller = (struct ke_aio_epoll *)data;
@@ -106,7 +95,6 @@ static void ke_aio_close_poller(void* data)
         poller->wakeup_pipe_fd[1] = -1;
     }
 
-#ifdef KE_AIO_ENABLE_REGULAR_FILE
     memset(&nullctx, 0, sizeof(nullctx));
     if (memcmp(&poller->aio_ctx, &nullctx, sizeof(poller->aio_ctx)))
         io_destroy(poller->aio_ctx);
@@ -115,28 +103,21 @@ static void ke_aio_close_poller(void* data)
         close(poller->aio_event_fd);
         poller->aio_event_fd = -1;
     }
-#endif
 
     if (poller->epoll_fd != -1) {
         close(poller->epoll_fd);
         poller->epoll_fd = -1;
     }
 
-#ifdef KE_AIO_ENABLE_REGULAR_FILE
     ke_lookaside_list_destroy(&poller->file_io_task_pool);
-#endif
-
     free(poller);
 }
 
 static ke_error_t
 ke_aio_create_poller(void** pp, const struct ke_aio_config *config)
 {
-    int err;
-#ifdef KE_AIO_ENABLE_REGULAR_FILE
-    int n = 1;
+    int n = 1, err;
     struct epoll_event ev;
-#endif
     struct ke_aio_epoll *poller;
 
     poller = calloc(1, sizeof(*poller));
@@ -147,19 +128,16 @@ ke_aio_create_poller(void** pp, const struct ke_aio_config *config)
     poller->wakeup_pipe_fd[1] = -1;
     poller->epoll_fd = -1;
 
-#ifdef KE_AIO_ENABLE_REGULAR_FILE
     poller->aio_event_fd = -1;
     ke_lookaside_list_init(&poller->file_io_task_pool,
                            config->free_io_ctx,
                            sizeof(struct ke_aio_file_io_task), -1,
                            config->alloc, config->free);
-#endif
 
-    poller->epoll_fd = epoll_create(20480);
+    poller->epoll_fd = epoll_create1(EPOLL_CLOEXEC);
     if (poller->epoll_fd == -1)
         goto ERR;
 
-#ifdef KE_AIO_ENABLE_REGULAR_FILE
     poller->aio_event_fd = eventfd();
     if (poller->aio_event_fd == -1)
         goto ERR;
@@ -169,12 +147,10 @@ ke_aio_create_poller(void** pp, const struct ke_aio_config *config)
 
     if (io_setup(KE_IO_EVENT_MAX_COUNT, &poller->aio_ctx) < 0)
         goto ERR;
-#endif
 
-    if (pipe(poller->wakeup_pipe_fd) < 0)
+    if (pipe2(poller->wakeup_pipe_fd, O_CLOEXEC | O_NONBLOCK) < 0)
         goto ERR;
 
-#ifdef KE_AIO_ENABLE_REGULAR_FILE
     memset(&ev, 0, sizeof(ev));    
     ev.events = EPOLLIN | EPOLLET;
     ev.data.ptr = &poller->aio_event_fd;
@@ -182,7 +158,6 @@ ke_aio_create_poller(void** pp, const struct ke_aio_config *config)
     if (epoll_ctl(poller->epoll_fd, EPOLL_CTL_ADD, 
                   poller->aio_event_fd, &ev) < 0)
         goto ERR;
-#endif
 
     *pp = poller;
     return (0);
@@ -255,8 +230,6 @@ static int ke_aio_set_connect_event(struct ke_aio_ioctx *ioctx)
     struct ke_aio_fd *afd = ioctx->afd;
     return ke_aio_epoll_ctl(afd->aio->poller, afd, EPOLLOUT);
 }
-
-#ifdef KE_AIO_ENABLE_REGULAR_FILE
 
 static int ke_aio_submit(struct ke_aio_ioctx *ioctx, uint64_t off, int io_type)
 {
@@ -378,8 +351,6 @@ static int ke_aio_submit_write(struct ke_aio_ioctx *ioctx, uint64_t off)
     return ke_aio_submit(ioctx, off, IOCB_CMD_PWRITE);    
 }
 
-#endif
-
 static void ke_aio_report_error_event(struct ke_aio_fd *afd)
 {
     struct ke_aio_ioctx *ioctx;
@@ -468,13 +439,12 @@ void ke_aio_run(ke_aio_t handle)
 
             epevt = events[i].events;
 
-#ifdef KE_AIO_ENABLE_REGULAR_FILE
             if (events[i].data.ptr == &poller->aio_event_fd) {
                 if (epevt & ~EPOLLOUT)
                     ke_aio_handle_file_event(aio);
                 continue;
             }
-#endif
+
             if (events[i].data.ptr == poller->wakeup_pipe_fd) {
                 ke_aio_disable_wakeup(aio);
                 continue;

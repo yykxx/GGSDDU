@@ -23,6 +23,10 @@
  * SUCH DAMAGE.
  */
 
+#if defined(linux) || defined(__linux) || defined(__linux__)
+#define _GNU_SOURCE
+#endif
+
 #include <unistd.h>
 #include <sys/types.h>
 #include <stdio.h>
@@ -64,10 +68,8 @@ enum ke_aio_type {
     KAT_TCP_WRITE,
     KAT_TCP_ACCEPT,
     KAT_TCP_CONNECT,
-#ifdef KE_AIO_ENABLE_REGULAR_FILE
     KAT_FILE_READ,
     KAT_FILE_WRITE,
-#endif
 };
 
 struct ke_aio_ioctx {
@@ -485,7 +487,6 @@ ke_error_t ke_aio_file_read(ke_aio_fd_t fd, char *buf, int buflen, uint64_t off,
                             void (*on_io_done)(void *, char *, int),
                             void *user_data)
 {
-#ifdef KE_AIO_ENABLE_REGULAR_FILE
     struct ke_aio *aio;
     struct ke_aio_fd *afd;
     struct ke_aio_ioctx *ioctx;
@@ -515,9 +516,6 @@ ke_error_t ke_aio_file_read(ke_aio_fd_t fd, char *buf, int buflen, uint64_t off,
         ke_lookaside_list_free(&aio->ioctx_pool, ioctx);
 
     return (err);
-#else
-    return (ENOTSUP);
-#endif
 }
 
 ke_error_t ke_aio_file_write(ke_aio_fd_t fd, const char *buf, int buflen, 
@@ -525,7 +523,6 @@ ke_error_t ke_aio_file_write(ke_aio_fd_t fd, const char *buf, int buflen,
                              void (*on_io_done)(void *, const char *, int), 
                              void *user_data)
 {
-#ifdef KE_AIO_ENABLE_REGULAR_FILE
     struct ke_aio *aio;
     struct ke_aio_fd *afd;
     struct ke_aio_ioctx *ioctx;
@@ -555,9 +552,6 @@ ke_error_t ke_aio_file_write(ke_aio_fd_t fd, const char *buf, int buflen,
         ke_lookaside_list_free(&aio->ioctx_pool, ioctx);
 
     return (err);
-#else
-    return (ENOTSUP);
-#endif
 }
 
 ke_error_t ke_aio_add_close_handler(ke_aio_fd_t fd, void (*handler)(void *), 
@@ -659,16 +653,12 @@ ke_error_t ke_aio_get_native_socket(ke_native_sock_t *sock, ke_aio_fd_t fd)
 
 ke_error_t ke_aio_get_native_file(ke_native_file_t *file, ke_aio_fd_t fd)
 {
-#ifdef KE_AIO_ENABLE_REGULAR_FILE
     struct ke_aio_fd *afd = (struct ke_aio_fd *)fd;
     if (afd && afd->type == KE_AIO_FD_FILE) {
         *file = afd->fd;
         return (0);
     }
     return (EINVAL);
-#else
-    return (ENOTSUP);
-#endif
 }
 
 static void ke_aio_tcp_read_event_handler(struct ke_aio_ioctx *ioctx)
@@ -728,8 +718,6 @@ static void ke_aio_tcp_write_event_handler(struct ke_aio_ioctx *ioctx)
     ke_lookaside_list_free(&aio->ioctx_pool, ioctx);
 }
 
-#ifdef KE_AIO_ENABLE_REGULAR_FILE
-
 static void ke_aio_file_read_event_handler(struct ke_aio_ioctx *ioctx)
 {
     struct ke_aio *aio = ioctx->afd->aio;
@@ -746,8 +734,6 @@ static void ke_aio_file_write_event_handler(struct ke_aio_ioctx *ioctx)
     ke_lookaside_list_free(&aio->ioctx_pool, ioctx);
 }
 
-#endif
-
 void ke_aio_error_event_handler(struct ke_aio_ioctx *ioctx)
 {
     struct ke_aio_fd *afd = ioctx->afd;
@@ -761,15 +747,11 @@ void ke_aio_error_event_handler(struct ke_aio_ioctx *ioctx)
         ioctx->on_conn_done(ioctx->user_data, 0);
         break;
     case KAT_TCP_READ:
-#ifdef KE_AIO_ENABLE_REGULAR_FILE
     case KAT_FILE_READ:
-#endif
         ioctx->on_read_done(ioctx->user_data, ioctx->rbuf, -1);
         break;
     case KAT_TCP_WRITE:
-#ifdef KE_AIO_ENABLE_REGULAR_FILE
     case KAT_FILE_WRITE:
-#endif
         ioctx->on_write_done(ioctx->user_data, ioctx->wbuf, -1);
         break;
     default:
@@ -785,11 +767,9 @@ void ke_aio_read_event_handler(struct ke_aio_ioctx *ioctx)
     case KAT_TCP_READ:
         ke_aio_tcp_read_event_handler(ioctx);
         break;
-#ifdef KE_AIO_ENABLE_REGULAR_FILE
     case KAT_FILE_READ:
         ke_aio_file_read_event_handler(ioctx);
         break;
-#endif
     default:
         assert(0 && "this will not happen");
         break;
@@ -802,11 +782,9 @@ void ke_aio_write_event_handler(struct ke_aio_ioctx *ioctx)
     case KAT_TCP_WRITE:
         ke_aio_tcp_write_event_handler(ioctx);        
         break;
-#ifdef KE_AIO_ENABLE_REGULAR_FILE
     case KAT_FILE_WRITE:
         ke_aio_file_write_event_handler(ioctx);        
         break;
-#endif
     default:
         assert(0 && "this will not happen");
         break;
