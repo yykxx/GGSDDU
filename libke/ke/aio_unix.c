@@ -454,7 +454,7 @@ ke_error_t ke_aio_tcp_connect(ke_aio_fd_t fd,
     
     if (err == -1) {
         if (errno == EISCONN || errno == 0) {
-            on_conn_done(user_data, 0);
+            on_conn_done(user_data, 1);
             return (0);
         }
         if (errno != EINTR && errno != EALREADY && errno != EINPROGRESS)
@@ -756,7 +756,7 @@ void ke_aio_error_event_handler(struct ke_aio_ioctx *ioctx)
         ioctx->on_accept_done(ioctx->user_data, -1, NULL, 0);
         break;
     case KAT_TCP_CONNECT:
-        ioctx->on_conn_done(ioctx->user_data, 1);
+        ioctx->on_conn_done(ioctx->user_data, 0);
         break;
     case KAT_TCP_READ:
 #ifdef KE_AIO_ENABLE_REGULAR_FILE
@@ -840,7 +840,6 @@ void ke_aio_accept_event_handler(struct ke_aio_ioctx *ioctx)
                 continue;
         } else if (err == -1) {
             /* unexpected error */
-            KE_AIO_SET_ERRNO(aio);
             ioctx->on_accept_done(ioctx->user_data, -1, NULL, 0);
         } else if (err == 1 && rc != 0) {
             /* automatic accept, reuse ioctx */
@@ -861,7 +860,7 @@ void ke_aio_connect_event_handler(struct ke_aio_ioctx *ioctx)
 {
     struct ke_aio_fd *afd = ioctx->afd;
     struct ke_aio *aio = afd->aio;
-    int ecode = 0, err;
+    int ecode = 0, err, is_connected = 0;
     socklen_t elen = sizeof(ecode);
 
     err = getsockopt(afd->fd, SOL_SOCKET, SO_ERROR, &ecode, &elen);
@@ -874,14 +873,11 @@ void ke_aio_connect_event_handler(struct ke_aio_ioctx *ioctx)
 
         if (ecode == EISCONN || ecode == 0) {
             /* connected */
-            ioctx->on_conn_done(ioctx->user_data, 0);
-            ke_lookaside_list_free(&aio->ioctx_pool, ioctx);
-            return;
+            is_connected = 1;
         }
     }
 
-    KE_AIO_SET_ERRNO(aio);
-    ioctx->on_conn_done(ioctx->user_data, 1);
+    ioctx->on_conn_done(ioctx->user_data, is_connected);
     ke_lookaside_list_free(&aio->ioctx_pool, ioctx);    
 }
 
