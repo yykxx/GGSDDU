@@ -119,7 +119,7 @@ ke_error_t ke_aio_create(ke_aio_t *handle, const struct ke_aio_config *config)
 {
     ke_error_t err;
     struct ke_aio *aio;
-    void *poller;
+    void *poller = NULL;
 
     if (!config || !config->alloc || !config->free)
         return (EINVAL);
@@ -127,6 +127,8 @@ ke_error_t ke_aio_create(ke_aio_t *handle, const struct ke_aio_config *config)
     aio = config->alloc(sizeof(*aio));
     if (!aio)
         return (errno);
+
+    memset(aio, 0, sizeof(*aio));
 
     err = ke_aio_create_poller(&poller, config);
     if (err) {
@@ -177,7 +179,7 @@ ke_error_t ke_aio_close(ke_aio_t handle)
         ke_lookaside_list_destroy(&aio->task_pool);
         ke_lookaside_list_destroy(&aio->close_handler_pool);
         ke_lookaside_list_destroy(&aio->ioctx_pool);
-        ke_lookaside_list_destroy(&aio->fd_pool);        
+        ke_lookaside_list_destroy(&aio->fd_pool);
     }
     aio->free(aio);
     return (0);
@@ -819,7 +821,7 @@ void ke_aio_accept_event_handler(struct ke_aio_ioctx *ioctx)
 
     do {
         struct sockaddr_in addr;
-        socklen_t addrlen;
+        socklen_t addrlen = sizeof(addr);
         int cli, err = 0;
 
         cli = accept(afd->fd, (struct sockaddr *)&addr, &addrlen);

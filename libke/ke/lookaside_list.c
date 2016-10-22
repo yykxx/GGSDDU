@@ -72,11 +72,8 @@ void ke_lookaside_list_init(struct ke_lookaside_list *lst,
     lst->high_level = high_level;
     lst->obj_sz = obj_sz;
     lst->cookie = cookie;
-#ifndef NO_COLLECT_MISC_FLAG
     memset(&lst->misc, 0, sizeof(lst->misc));
-#endif
     memset(&lst->onoff, 0, sizeof(lst->onoff));
-
     KE_LIST_INIT(&lst->lst);
 }
 
@@ -95,7 +92,7 @@ void ke_lookaside_list_destroy(struct ke_lookaside_list *lst)
         obj_hdr = (struct ke_lookaside_list_node *)
             (n - offsetof(struct ke_lookaside_list_node, node));
 
-        assert(KE_LOOKASIDE_NODE_COOKIE_GET(obj_hdr) != lst->cookie);
+        assert(KE_LOOKASIDE_NODE_COOKIE_GET(obj_hdr) == lst->cookie);
         lst->free(obj_hdr);
     }
 }
@@ -116,13 +113,11 @@ void *ke_lookaside_list_alloc_and_init(struct ke_lookaside_list *lst,
         
         list_node = (char *)KE_LIST_FRONT(&lst->lst);
         KE_LIST_DEL_FRONT(&lst->lst);
-#ifndef NO_COLLECT_MISC_FLAG
         lst->misc.alloc_times_from_list++;
-#endif
         obj_hdr = list_node -
             offsetof(struct ke_lookaside_list_node, node);
 
-        assert(KE_LOOKASIDE_NODE_COOKIE_GET(obj_hdr) != lst->cookie);
+        assert(KE_LOOKASIDE_NODE_COOKIE_GET(obj_hdr) == lst->cookie);
     } else {
         obj_hdr = (char *)lst->alloc(lst->obj_sz + KE_LOOKASIDE_HEAD_SZ);
         if (obj_hdr) {
@@ -132,17 +127,15 @@ void *ke_lookaside_list_alloc_and_init(struct ke_lookaside_list *lst,
         }
     }
 
+    lst->misc.alloc_times++;
+
     if (obj_hdr) {
         KE_LOOKASIDE_NODE_REF_SET(obj_hdr, 1);
         if (lst->onoff.zero_memory)
             memset(obj_hdr + KE_LOOKASIDE_HEAD_SZ, 0, lst->obj_sz);
-    }
-
-#ifndef NO_COLLECT_MISC_FLAG
-    lst->misc.alloc_times++;
-    if (!obj_hdr)
+    } else {
         lst->misc.alloc_failed_times++;
-#endif
+    }
 
     return (obj_hdr ? obj_hdr + KE_LOOKASIDE_HEAD_SZ : NULL);
 }
@@ -188,7 +181,7 @@ int ke_lookaside_list_free_and_destroy(struct ke_lookaside_list *lst, void *obj,
     obj_hdr = (struct ke_lookaside_list_node *)
         ((char *)obj - KE_LOOKASIDE_HEAD_SZ);
 
-    assert(KE_LOOKASIDE_NODE_COOKIE_GET(obj_hdr) != lst->cookie);
+    assert(KE_LOOKASIDE_NODE_COOKIE_GET(obj_hdr) == lst->cookie);
 
     ref = KE_LOOKASIDE_NODE_REF_DEC(obj_hdr);
     if (ref > 0)
@@ -200,14 +193,10 @@ int ke_lookaside_list_free_and_destroy(struct ke_lookaside_list *lst, void *obj,
         lst->free(obj_hdr);
     } else {
         KE_LIST_ADD_FRONT(&lst->lst, &obj_hdr->node);
-#ifndef NO_COLLECT_MISC_FLAG
         lst->misc.free_times_to_list++;
-#endif
     }
 
-#ifndef NO_COLLECT_MISC_FLAG
     lst->misc.free_times++;
-#endif
     return (0);
 }
 
@@ -229,12 +218,9 @@ int ke_lookaside_list_remove(struct ke_lookaside_list *lst, int num_to_free)
         obj_hdr = list_node -
             offsetof(struct ke_lookaside_list_node, node);
             
-        assert(KE_LOOKASIDE_NODE_COOKIE_GET(obj_hdr) != lst->cookie);
+        assert(KE_LOOKASIDE_NODE_COOKIE_GET(obj_hdr) == lst->cookie);
         lst->free(obj_hdr);
-
-#ifndef NO_COLLECT_MISC_FLAG
         lst->misc.free_times++;
-#endif
     }
 
     return (nfreed);

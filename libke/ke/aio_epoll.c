@@ -139,7 +139,7 @@ ke_aio_create_poller(void** pp, const struct ke_aio_config *config)
 #endif
     struct ke_aio_epoll *poller;
 
-    poller = calloc(0, sizeof(*poller));
+    poller = calloc(1, sizeof(*poller));
     if (!poller)
         return (ENOMEM);
 
