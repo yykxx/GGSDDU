@@ -2,7 +2,6 @@ project(libke)
 
 cmake_minimum_required(VERSION 2.8)
 
-option(REGULAR_FILE_AIO "aio for regular file" ON)
 option(STRICT_CHECK "strict check" ON)
 
 if (CMAKE_SYSTEM_NAME MATCHES "Linux")
@@ -10,13 +9,6 @@ if (CMAKE_SYSTEM_NAME MATCHES "Linux")
 elseif (CMAKE_SYSTEM_NAME MATCHES "Windows")
     message("build on windows")
     set(CMAKE_MFC_FLAGS 0)
-endif ()
-
-if (${REGULAR_FILE_AIO} STREQUAL "ON")
-    message("enable aio for regular file")
-    add_definitions(-DKE_AIO_ENABLE_REGULAR_FILE)
-else ()
-    message("disable aio for regular file")
 endif ()
 
 if (${STRICT_CHECK} STREQUAL "ON")
@@ -27,8 +19,6 @@ else ()
 endif ()
 
 set(SRC 
-	ke/aio.c
-	ke/aio.h
 	ke/bitset.c
 	ke/bitset.h
 	ke/bstree.c
