@@ -27,34 +27,6 @@
 #ifndef _KE_DEFS_H
 #define _KE_DEFS_H
 
-#if defined(_WIN32) || defined(_WIN64)
-
-#ifndef WIN32_LEAN_AND_MEAN
-#define WIN32_LEAN_AND_MEAN
-#endif
-
-#include <winsock2.h>
-#include <ws2tcpip.h>
-#include <windows.h>
-
-typedef unsigned int mode_t;
-typedef SOCKET ke_native_sock_t;
-typedef HANDLE ke_native_file_t;
-typedef DWORD ke_error_t;
-
-#else
-
-#include <netinet/in.h>
-
-typedef int ke_native_sock_t;
-typedef int ke_native_file_t;
-typedef int ke_error_t;
-
-#endif
-
-#include <fcntl.h>
-#include <sys/types.h>
-#include <sys/stat.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
